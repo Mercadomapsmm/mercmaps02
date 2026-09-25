@@ -11,12 +11,12 @@ import { ListSelector } from '@/components/ListSelector';
 import { VoiceModal } from '@/components/VoiceModal';
 import { MercadoLivreBanner } from '@/components/MercadoLivreBanner';
 import { PwaRegister } from '@/components/PwaRegister';
-import { CONTRAST_THEMES } from '@/lib/contrastThemes';
+import { CONTRAST_THEMES, THEME_LIST } from '@/lib/contrastThemes';
 import { CATEGORIES, detectCategory } from '@/lib/categories';
 import { agruparItensPorTabela } from '@/lib/productTable';
 import { ParsedVoiceItem, speakListItems, stopSpeaking } from '@/lib/speech';
 import { playCheckSound, playUncheckSound, playCompleteSound, playAddSound, playShareSound } from '@/lib/sound';
-import { decodeListFromUrl } from '@/lib/sharing';
+import { decodeListFromUrl, decodeSharedDataFromUrl } from '@/lib/sharing';
 import { ShareModal } from '@/components/ShareModal';
 import { ImportListModal } from '@/components/ImportListModal';
 import { Mic, Search, CheckCircle, ShoppingCart, Layers, Share2 } from 'lucide-react';
@@ -200,6 +200,7 @@ export default function ShoppingListPage() {
   const [shareInitialTab, setShareInitialTab] = useState<'list' | 'app'>('list');
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [incomingSharedList, setIncomingSharedList] = useState<ShoppingList | null>(null);
+  const [incomingSharedLists, setIncomingSharedLists] = useState<ShoppingList[] | null>(null);
 
   // Alternância de posições entre bans-01 e bani-01 a cada 30 segundos
   const [topBannerId, setTopBannerId] = useState<'bans-01' | 'bani-01'>('bans-01');
@@ -252,15 +253,22 @@ export default function ShoppingListPage() {
           setActiveListId(savedActiveId);
         }
 
-        // Verifica se há lista compartilhada recebida na URL (?importList=...)
+        // Verifica se há lista(s) compartilhada(s) recebida(s) na URL (?importList=...)
         if (typeof window !== 'undefined') {
           const urlParams = new URLSearchParams(window.location.search);
           const importData = urlParams.get('importList');
           if (importData) {
-            const decoded = decodeListFromUrl(importData);
-            if (decoded && decoded.items) {
-              setIncomingSharedList(decoded);
-              setIsImportModalOpen(true);
+            const decoded = decodeSharedDataFromUrl(importData);
+            if (decoded) {
+              if (decoded.type === 'single' && decoded.list) {
+                setIncomingSharedList(decoded.list);
+                setIncomingSharedLists(null);
+                setIsImportModalOpen(true);
+              } else if (decoded.type === 'all' && decoded.lists && decoded.lists.length > 0) {
+                setIncomingSharedLists(decoded.lists);
+                setIncomingSharedList(null);
+                setIsImportModalOpen(true);
+              }
             }
             // Remove o parâmetro da barra de endereço de forma limpa
             const cleanUrl = window.location.pathname;
@@ -627,6 +635,88 @@ export default function ShoppingListPage() {
     }
   };
 
+  const handleImportAllLists = (newLists: ShoppingList[]) => {
+    if (!newLists || newLists.length === 0) return;
+
+    const imported: ShoppingList[] = newLists.map((l, lIdx) => {
+      const nameExists = lists.some(existing => existing.name.toLowerCase() === l.name.toLowerCase());
+      const finalName = nameExists ? `${l.name} (Compartilhada)` : l.name;
+      const newId = `list-${Date.now()}-${lIdx}`;
+
+      return {
+        ...l,
+        id: newId,
+        name: finalName,
+        createdAt: Date.now() + lIdx,
+        updatedAt: Date.now() + lIdx,
+        items: l.items.map((item, itIdx) => ({
+          ...item,
+          id: `item-${Date.now()}-${lIdx}-${itIdx}-${Math.random().toString(36).substring(2, 6)}`,
+        })),
+      };
+    });
+
+    setLists(prev => [...imported, ...prev]);
+    setActiveListId(imported[0].id);
+    setIsImportModalOpen(false);
+    setIncomingSharedLists(null);
+    setIncomingSharedList(null);
+
+    if (settings.soundFeedback) playCompleteSound();
+    try {
+      confetti({
+        particleCount: 100,
+        spread: 80,
+        origin: { y: 0.6 },
+      });
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleMergeAllWithActive = (listsToMerge: ShoppingList[]) => {
+    if (!activeList || !listsToMerge || listsToMerge.length === 0) return;
+
+    const allNewItems: ShoppingItem[] = [];
+    listsToMerge.forEach((l, lIdx) => {
+      l.items.forEach((it, itIdx) => {
+        allNewItems.push({
+          ...it,
+          id: `item-merge-${Date.now()}-${lIdx}-${itIdx}-${Math.random().toString(36).substring(2, 6)}`,
+          createdAt: Date.now() + lIdx * 100 + itIdx,
+        });
+      });
+    });
+
+    setLists(prev =>
+      prev.map(l => {
+        if (l.id === activeListId) {
+          return {
+            ...l,
+            items: [...allNewItems, ...l.items],
+            updatedAt: Date.now(),
+          };
+        }
+        return l;
+      })
+    );
+
+    setIsImportModalOpen(false);
+    setIncomingSharedLists(null);
+    setIncomingSharedList(null);
+
+    if (settings.soundFeedback) playAddSound();
+    try {
+      confetti({
+        particleCount: 70,
+        spread: 70,
+        origin: { y: 0.6 },
+      });
+    } catch {
+      // ignore
+    }
+  };
+
   // Filter items
   const filteredItems = (activeList?.items || []).filter(item => {
     if (filter === 'pending' && item.isBought) return false;
@@ -751,22 +841,74 @@ export default function ShoppingListPage() {
         remainingCount={pendingItems.length}
       />
 
-      {/* Header Principal do App com Título sempre em Destaque e Ações */}
+      {/* Header Principal do App com Título sempre em Destaque, Cores e Ações */}
       <header className="max-w-4xl mx-auto px-3 sm:px-4 pt-3 pb-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div
-            id="app-default-icon"
-            className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-emerald-600 dark:bg-emerald-500 text-white flex items-center justify-center shadow-md shrink-0"
-            aria-hidden="true"
-          >
-            <ShoppingCart className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+        <div className="flex flex-col gap-2 w-full sm:w-auto">
+          <div className="flex items-center gap-3">
+            <div
+              id="app-default-icon"
+              className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-emerald-600 dark:bg-emerald-500 text-white flex items-center justify-center shadow-md shrink-0"
+              aria-hidden="true"
+            >
+              <ShoppingCart className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+            </div>
+            <h1
+              id="app-main-title"
+              className={`text-2xl sm:text-3xl lg:text-4xl tracking-tight leading-none ${activeTheme.titleColor}`}
+            >
+              Lista de Compras
+            </h1>
           </div>
-          <h1
-            id="app-main-title"
-            className={`text-2xl sm:text-3xl lg:text-4xl tracking-tight leading-none ${activeTheme.titleColor}`}
+
+          {/* Botões das cores logo abaixo do nome "Lista de Compras" (sem escrever o nome das cores) */}
+          <div
+            id="header-color-buttons"
+            className="flex items-center gap-1.5 flex-wrap pt-0.5"
+            aria-label="Paleta de cores"
           >
-            Lista de Compras
-          </h1>
+            {THEME_LIST.map((theme) => {
+              const isSelected = currentThemeId === theme.id;
+              return (
+                <button
+                  key={theme.id}
+                  type="button"
+                  onClick={() =>
+                    handleUpdateSettings({
+                      contrastTheme: theme.id,
+                      highContrast: theme.id !== 'padrao',
+                    })
+                  }
+                  className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full transition-all active:scale-90 cursor-pointer flex items-center justify-center shrink-0 ${
+                    isSelected
+                      ? 'ring-2 ring-emerald-500 ring-offset-2 scale-110 shadow-sm'
+                      : 'hover:scale-110 opacity-75 hover:opacity-100'
+                  }`}
+                  style={{
+                    backgroundColor: theme.dotColor,
+                    border: `1.5px solid ${theme.borderDot || '#94a3b8'}`,
+                  }}
+                  title={theme.name}
+                  aria-label={theme.name}
+                >
+                  {isSelected && (
+                    <span
+                      className="w-1.5 h-1.5 rounded-full"
+                      style={{
+                        backgroundColor:
+                          theme.dotColor === '#FFFFFF' ||
+                          theme.dotColor === '#F8FAFC' ||
+                          theme.dotColor === '#FEF08A' ||
+                          theme.dotColor === '#94A3B8' ||
+                          theme.dotColor === '#CBD5E1'
+                            ? '#000000'
+                            : '#FFFFFF',
+                      }}
+                    />
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap justify-end">
@@ -1012,11 +1154,15 @@ export default function ShoppingListPage() {
         onClose={() => {
           setIsImportModalOpen(false);
           setIncomingSharedList(null);
+          setIncomingSharedLists(null);
         }}
         sharedList={incomingSharedList}
+        sharedLists={incomingSharedLists}
         activeListName={activeList?.name || 'Lista Atual'}
         onImportAsNew={handleImportAsNew}
         onMergeWithActive={handleMergeWithActive}
+        onImportAllLists={handleImportAllLists}
+        onMergeAllWithActive={handleMergeAllWithActive}
         fontSize={settings.fontSize}
         highContrast={settings.highContrast}
         contrastTheme={currentThemeId}

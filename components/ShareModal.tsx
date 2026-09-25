@@ -1,19 +1,20 @@
 'use client';
 
-import React, { useState, useEffect, useId } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ShoppingList, FontSizeOption, ContrastThemeId } from '@/types/shopping';
 import { CONTRAST_THEMES } from '@/lib/contrastThemes';
 import {
   generateShareableListText,
+  generateShareableAllListsText,
   generateAppShareText,
   encodeListToUrl,
+  encodeAllListsToUrl,
   getAppBaseUrl,
   shareViaWhatsApp,
   shareViaTelegram,
   shareViaNative,
   copyToClipboard,
   generateQRCodeDataUrl,
-  printFormattedList,
 } from '@/lib/sharing';
 import { playShareSound } from '@/lib/sound';
 import {
@@ -22,15 +23,12 @@ import {
   Copy,
   Check,
   Smartphone,
-  Printer,
   QrCode,
   Send,
   MessageCircle,
-  ExternalLink,
   ChevronDown,
   Sparkles,
   Layers,
-  Eye,
   Download,
 } from 'lucide-react';
 
@@ -80,19 +78,27 @@ export const ShareModal: React.FC<ShareModalProps> = ({
   const [includeLink, setIncludeLink] = useState(true);
 
   // Estados de cópia e QR code
-  const [copiedLink, setCopiedLink] = useState(false);
-  const [copiedText, setCopiedText] = useState(false);
   const [copiedAppUrl, setCopiedAppUrl] = useState(false);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
   const [appQrCodeDataUrl, setAppQrCodeDataUrl] = useState<string>('');
-  const [showPreview, setShowPreview] = useState(false);
 
   const hasNativeShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
 
+  // Identifica se o usuário optou por compartilhar TODAS as listas
+  const isSharingAll = selectedListId === '__ALL_LISTS__';
   const currentList = lists.find(l => l.id === selectedListId) || lists[0];
 
-  // Gera o texto atualizado da lista
-  const listShareText = currentList
+  const totalAllItems = lists.reduce((acc, l) => acc + l.items.length, 0);
+  const totalAllPending = lists.reduce((acc, l) => acc + l.items.filter(i => !i.isBought).length, 0);
+
+  // Gera o texto atualizado da lista ou de todas as listas
+  const listShareText = isSharingAll
+    ? generateShareableAllListsText(lists, {
+        onlyPending,
+        includePrices,
+        includeLink,
+      })
+    : currentList
     ? generateShareableListText(currentList, {
         onlyPending,
         includePrices,
@@ -100,18 +106,22 @@ export const ShareModal: React.FC<ShareModalProps> = ({
       })
     : '';
 
-  // Gera o link atualizado da lista
-  const listShareUrl = currentList ? encodeListToUrl(currentList) : getAppBaseUrl();
+  // Gera o link atualizado (única lista ou todas as listas)
+  const listShareUrl = isSharingAll
+    ? encodeAllListsToUrl(lists)
+    : currentList
+    ? encodeListToUrl(currentList)
+    : getAppBaseUrl();
 
-  // Gera texto de compartilhamento do app
+  // Gera texto de recomendação do app
   const appShareText = generateAppShareText();
   const appUrl = getAppBaseUrl();
 
-  // Gera QR Code para a lista quando muda
+  // Gera QR Code atualizado quando muda a seleção
   useEffect(() => {
     if (!isOpen) return;
 
-    if (activeTab === 'list' && currentList) {
+    if (activeTab === 'list') {
       generateQRCodeDataUrl(listShareUrl)
         .then(url => setQrCodeDataUrl(url))
         .catch(() => setQrCodeDataUrl(''));
@@ -120,27 +130,9 @@ export const ShareModal: React.FC<ShareModalProps> = ({
         .then(url => setAppQrCodeDataUrl(url))
         .catch(() => setAppQrCodeDataUrl(''));
     }
-  }, [isOpen, activeTab, listShareUrl, appUrl, currentList]);
+  }, [isOpen, activeTab, listShareUrl, appUrl]);
 
   if (!isOpen) return null;
-
-  const handleCopyLink = async () => {
-    const success = await copyToClipboard(listShareUrl);
-    if (success) {
-      setCopiedLink(true);
-      if (soundEnabled) playShareSound();
-      setTimeout(() => setCopiedLink(false), 2500);
-    }
-  };
-
-  const handleCopyText = async () => {
-    const success = await copyToClipboard(listShareText);
-    if (success) {
-      setCopiedText(true);
-      if (soundEnabled) playShareSound();
-      setTimeout(() => setCopiedText(false), 2500);
-    }
-  };
 
   const handleCopyAppUrl = async () => {
     const success = await copyToClipboard(appUrl);
@@ -161,35 +153,17 @@ export const ShareModal: React.FC<ShareModalProps> = ({
   };
 
   const handleTelegramShare = () => {
-    if (activeTab === 'list') {
-      shareViaTelegram(listShareText);
-    } else {
-      shareViaTelegram(appShareText, appUrl);
-    }
+    shareViaTelegram(appShareText, appUrl);
     if (soundEnabled) playShareSound();
   };
 
   const handleNativeShare = async () => {
     if (soundEnabled) playShareSound();
-    if (activeTab === 'list' && currentList) {
-      await shareViaNative({
-        title: `Lista: ${currentList.name}`,
-        text: listShareText,
-        url: includeLink ? listShareUrl : undefined,
-      });
-    } else {
-      await shareViaNative({
-        title: 'MercadoList - Lista de Compras Inteligente',
-        text: appShareText,
-        url: appUrl,
-      });
-    }
-  };
-
-  const handlePrint = () => {
-    if (currentList) {
-      printFormattedList(currentList, { onlyPending });
-    }
+    await shareViaNative({
+      title: 'MercadoList - Lista de Compras Inteligente',
+      text: appShareText,
+      url: appUrl,
+    });
   };
 
   const handleDownloadQr = (dataUrl: string, filename: string) => {
@@ -258,12 +232,10 @@ export const ShareModal: React.FC<ShareModalProps> = ({
             }`}
           >
             <Layers className="w-4 h-4" />
-            <span>Compartilhar Lista</span>
-            {currentList && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300">
-                {currentList.items.length}
-              </span>
-            )}
+            <span>{isSharingAll ? 'Todas as Listas' : 'Compartilhar Lista'}</span>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300">
+              {isSharingAll ? `${lists.length} listas` : currentList ? `${currentList.items.length}` : '0'}
+            </span>
           </button>
 
           <button
@@ -282,48 +254,71 @@ export const ShareModal: React.FC<ShareModalProps> = ({
 
         {/* Modal Scrollable Body */}
         <div className="flex-1 overflow-y-auto p-5 space-y-5 no-scrollbar">
-          {activeTab === 'list' && currentList && (
+          {activeTab === 'list' && (
             <>
-              {/* Seleção de Lista se houver mais de uma */}
-              {lists.length > 1 && (
-                <div className="space-y-1.5">
-                  <label htmlFor="share-list-select" className="text-xs font-bold uppercase tracking-wider opacity-75">
-                    Escolha a lista para compartilhar:
-                  </label>
-                  <div className="relative">
-                    <select
-                      id="share-list-select"
-                      value={selectedListId}
-                      onChange={(e) => setSelectedListId(e.target.value)}
-                      className={`w-full px-3.5 py-2.5 rounded-xl border text-sm font-bold appearance-none cursor-pointer focus:ring-2 focus:ring-emerald-500 ${activeTheme.bgInput} ${activeTheme.borderInput} text-current`}
-                    >
-                      {lists.map(l => (
-                        <option key={l.id} value={l.id} className="text-slate-900 bg-white">
-                          {l.icon || '🛒'} {l.name} ({l.items.length} itens)
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="w-4 h-4 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none opacity-60" />
-                  </div>
-                </div>
-              )}
+              {/* Seleção de Lista ou Todas as Listas */}
+              <div className="space-y-1.5">
+                <label htmlFor="share-list-select" className="text-xs font-bold uppercase tracking-wider opacity-75">
+                  Escolha a lista para compartilhar:
+                </label>
+                <div className="relative">
+                  <select
+                    id="share-list-select"
+                    value={selectedListId}
+                    onChange={(e) => setSelectedListId(e.target.value)}
+                    className={`w-full px-3.5 py-2.5 rounded-xl border text-sm font-bold appearance-none cursor-pointer focus:ring-2 focus:ring-emerald-500 ${activeTheme.bgInput} ${activeTheme.borderInput} text-current`}
+                  >
+                    {/* Opção Destaque: Compartilhar Todas as Listas */}
+                    <option value="__ALL_LISTS__" className="text-slate-900 bg-white font-extrabold">
+                      🌟 Todas as Listas ({lists.length} {lists.length === 1 ? 'lista' : 'listas'} • {totalAllItems} {totalAllItems === 1 ? 'item' : 'itens'})
+                    </option>
 
-              {/* Destaque da Lista Selecionada */}
-              <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/80 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2.5">
-                  <span className="text-2xl">{currentList.icon || '🛒'}</span>
-                  <div>
-                    <h3 className="font-extrabold text-base text-emerald-950 dark:text-emerald-100">
-                      {currentList.name}
-                    </h3>
-                    <p className="text-xs font-medium text-emerald-700 dark:text-emerald-300">
-                      {currentList.items.length} {currentList.items.length === 1 ? 'item' : 'itens'} no total
-                      {' • '}
-                      {currentList.items.filter(i => !i.isBought).length} pendentes
-                    </p>
-                  </div>
+                    {/* Opções Individuais */}
+                    {lists.map(l => (
+                      <option key={l.id} value={l.id} className="text-slate-900 bg-white">
+                        {l.icon || '🛒'} {l.name} ({l.items.length} {l.items.length === 1 ? 'item' : 'itens'})
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="w-4 h-4 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none opacity-60" />
                 </div>
               </div>
+
+              {/* Destaque da Seleção Atual */}
+              {isSharingAll ? (
+                <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/80 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-2xl">🌟</span>
+                    <div>
+                      <h3 className="font-extrabold text-base text-emerald-950 dark:text-emerald-100">
+                        Todas as suas Listas de Compras
+                      </h3>
+                      <p className="text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                        {lists.length} {lists.length === 1 ? 'lista' : 'listas'} no total • {totalAllItems} itens ({totalAllPending} a comprar)
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-[11px] font-extrabold px-2.5 py-1 rounded-lg bg-emerald-600 text-white">
+                    Pacote Completo
+                  </span>
+                </div>
+              ) : currentList ? (
+                <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/80 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-2xl">{currentList.icon || '🛒'}</span>
+                    <div>
+                      <h3 className="font-extrabold text-base text-emerald-950 dark:text-emerald-100">
+                        {currentList.name}
+                      </h3>
+                      <p className="text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                        {currentList.items.length} {currentList.items.length === 1 ? 'item' : 'itens'} no total
+                        {' • '}
+                        {currentList.items.filter(i => !i.isBought).length} a comprar
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
 
               {/* Opções de Personalização do Envio */}
               <div className="p-3 rounded-2xl border border-current/15 bg-black/5 dark:bg-white/5 space-y-2.5">
@@ -339,7 +334,15 @@ export const ShareModal: React.FC<ShareModalProps> = ({
                       onChange={(e) => setOnlyPending(e.target.checked)}
                       className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
                     />
-                    <span>Apenas itens a comprar ({currentList.items.filter(i => !i.isBought).length})</span>
+                    <span>
+                      Apenas itens a comprar (
+                      {isSharingAll
+                        ? totalAllPending
+                        : currentList
+                        ? currentList.items.filter(i => !i.isBought).length
+                        : 0}
+                      )
+                    </span>
                   </label>
 
                   <label className="flex items-center gap-2 cursor-pointer select-none">
@@ -374,81 +377,26 @@ export const ShareModal: React.FC<ShareModalProps> = ({
                 <button
                   type="button"
                   onClick={handleWhatsAppShare}
-                  className="w-full flex items-center justify-center gap-2.5 py-3 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm sm:text-base shadow-lg shadow-emerald-600/30 transition-all active:scale-98 cursor-pointer"
+                  className="w-full flex items-center justify-center gap-2.5 py-3.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm sm:text-base shadow-lg shadow-emerald-600/30 transition-all active:scale-98 cursor-pointer"
                 >
                   <MessageCircle className="w-5 h-5 fill-current" />
-                  <span>Enviar no WhatsApp</span>
+                  <span>
+                    {isSharingAll ? 'Enviar Todas as Listas no WhatsApp' : 'Enviar no WhatsApp'}
+                  </span>
                 </button>
-
-                {/* Grid de Ações Secundárias */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {/* Compartilhar Nativo */}
-                  {hasNativeShare && (
-                    <button
-                      type="button"
-                      onClick={handleNativeShare}
-                      className="flex items-center justify-center gap-2 p-2.5 rounded-xl border border-current/20 bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/15 text-xs sm:text-sm font-bold transition-all active:scale-95 cursor-pointer"
-                    >
-                      <Share2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                      <span>Outros Apps</span>
-                    </button>
-                  )}
-
-                  {/* Copiar Link Interativo */}
-                  <button
-                    type="button"
-                    onClick={handleCopyLink}
-                    className={`flex items-center justify-center gap-2 p-2.5 rounded-xl border border-current/20 text-xs sm:text-sm font-bold transition-all active:scale-95 cursor-pointer ${
-                      copiedLink ? 'bg-emerald-600 text-white border-transparent' : 'bg-black/5 dark:bg-white/10 hover:bg-black/10'
-                    }`}
-                  >
-                    {copiedLink ? <Check className="w-4 h-4 text-white" /> : <Copy className="w-4 h-4 text-blue-500" />}
-                    <span>{copiedLink ? 'Link Copiado!' : 'Copiar Link'}</span>
-                  </button>
-
-                  {/* Copiar Texto Formatado */}
-                  <button
-                    type="button"
-                    onClick={handleCopyText}
-                    className={`flex items-center justify-center gap-2 p-2.5 rounded-xl border border-current/20 text-xs sm:text-sm font-bold transition-all active:scale-95 cursor-pointer ${
-                      copiedText ? 'bg-emerald-600 text-white border-transparent' : 'bg-black/5 dark:bg-white/10 hover:bg-black/10'
-                    }`}
-                  >
-                    {copiedText ? <Check className="w-4 h-4 text-white" /> : <Send className="w-4 h-4 text-indigo-500" />}
-                    <span>{copiedText ? 'Texto Copiado!' : 'Copiar Texto'}</span>
-                  </button>
-
-                  {/* Telegram */}
-                  <button
-                    type="button"
-                    onClick={handleTelegramShare}
-                    className="flex items-center justify-center gap-2 p-2.5 rounded-xl border border-current/20 bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/15 text-xs sm:text-sm font-bold transition-all active:scale-95 cursor-pointer"
-                  >
-                    <Send className="w-4 h-4 text-sky-500" />
-                    <span>Telegram</span>
-                  </button>
-
-                  {/* Imprimir / Salvar PDF */}
-                  <button
-                    type="button"
-                    onClick={handlePrint}
-                    className="flex items-center justify-center gap-2 p-2.5 rounded-xl border border-current/20 bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/15 text-xs sm:text-sm font-bold transition-all active:scale-95 cursor-pointer"
-                  >
-                    <Printer className="w-4 h-4 text-slate-600 dark:text-slate-300" />
-                    <span>Imprimir / PDF</span>
-                  </button>
-                </div>
               </div>
 
-              {/* Seção QR Code da Lista */}
+              {/* Seção QR Code */}
               <div className="p-4 rounded-2xl border border-current/15 bg-black/5 dark:bg-white/5 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <QrCode className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                     <div>
-                      <h4 className="font-extrabold text-sm">QR Code da Lista</h4>
+                      <h4 className="font-extrabold text-sm">
+                        {isSharingAll ? 'QR Code de Todas as Listas' : 'QR Code da Lista'}
+                      </h4>
                       <p className="text-xs opacity-75">
-                        Escaneie com a câmera do celular para abrir ou importar
+                        Escaneie com a câmera de outro celular para abrir ou importar
                       </p>
                     </div>
                   </div>
@@ -456,7 +404,14 @@ export const ShareModal: React.FC<ShareModalProps> = ({
                   {qrCodeDataUrl && (
                     <button
                       type="button"
-                      onClick={() => handleDownloadQr(qrCodeDataUrl, `lista-${currentList.name.toLowerCase().replace(/\s+/g, '-')}-qrcode.png`)}
+                      onClick={() =>
+                        handleDownloadQr(
+                          qrCodeDataUrl,
+                          isSharingAll
+                            ? 'todas-listas-qrcode.png'
+                            : `lista-${currentList?.name.toLowerCase().replace(/\s+/g, '-')}-qrcode.png`
+                        )
+                      }
                       className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-current/20 text-xs font-bold hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
                       title="Baixar imagem do QR Code"
                     >
@@ -471,39 +426,18 @@ export const ShareModal: React.FC<ShareModalProps> = ({
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={qrCodeDataUrl}
-                      alt={`QR Code para a lista ${currentList.name}`}
+                      alt="QR Code da Lista de Compras"
                       className="w-44 h-44 sm:w-52 sm:h-52 object-contain"
                     />
                     <span className="text-[11px] font-bold text-slate-600 mt-2 text-center">
-                      Aponte a câmera para abrir &quot;{currentList.name}&quot;
+                      {isSharingAll
+                        ? `Aponte a câmera para importar todas as ${lists.length} listas`
+                        : `Aponte a câmera para abrir "${currentList?.name}"`}
                     </span>
                   </div>
                 ) : (
                   <div className="h-40 flex items-center justify-center text-xs opacity-60">
                     Gerando QR Code...
-                  </div>
-                )}
-              </div>
-
-              {/* Prévia expansível da mensagem formatada */}
-              <div className="border border-current/15 rounded-2xl overflow-hidden">
-                <button
-                  type="button"
-                  onClick={() => setShowPreview(!showPreview)}
-                  className="w-full flex items-center justify-between p-3.5 text-xs font-extrabold uppercase tracking-wider opacity-85 hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer"
-                >
-                  <span className="flex items-center gap-2">
-                    <Eye className="w-4 h-4 text-emerald-500" />
-                    <span>Ver Prévia do Texto ({currentList.items.length} itens)</span>
-                  </span>
-                  <ChevronDown className={`w-4 h-4 transition-transform ${showPreview ? 'rotate-180' : ''}`} />
-                </button>
-
-                {showPreview && (
-                  <div className="p-3 bg-black/10 dark:bg-white/10 border-t border-current/15">
-                    <pre className="text-xs font-mono whitespace-pre-wrap select-all leading-relaxed max-h-48 overflow-y-auto">
-                      {listShareText}
-                    </pre>
                   </div>
                 )}
               </div>

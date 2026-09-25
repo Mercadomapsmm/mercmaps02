@@ -70,7 +70,20 @@ export type ContrastThemeId =
   | 'laranja-solar'
   | 'solar-creme'
   | 'ciano-neon'
-  | 'verde-lima';
+  | 'verde-lima'
+  | 'azul-indigo'
+  | 'grafite-ardosia'
+  | 'azul-safira'
+  | 'verde-teal'
+  | 'vermelho-coral'
+  | 'fucsia-pro'
+  | 'ouro-nordico'
+  | 'azul-celeste'
+  | 'vinho-bordeaux'
+  | 'verde-oliva'
+  | 'terracota-rust'
+  | 'platina-minimal'
+  | 'turquesa-oceano';
 
 export interface AccessibilitySettings {
   fontSize: FontSizeOption;
