@@ -76,17 +76,13 @@ export type ContrastThemeId =
   | 'azul-safira'
   | 'verde-teal'
   | 'vermelho-coral'
-  | 'fucsia-pro'
-  | 'ouro-nordico'
   | 'azul-celeste'
   | 'vinho-bordeaux'
   | 'verde-oliva'
   | 'terracota-rust'
   | 'platina-minimal'
-  | 'turquesa-oceano'
   | 'lavanda-pro'
-  | 'verde-musgo'
-  | 'cobre-bronze';
+  | 'verde-musgo';
 
 export interface AccessibilitySettings {
   fontSize: FontSizeOption;

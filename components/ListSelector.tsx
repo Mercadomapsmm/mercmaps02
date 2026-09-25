@@ -246,7 +246,7 @@ export const ListSelector: React.FC<ListSelectorProps> = ({
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUpOrLeave}
         onMouseLeave={handleMouseUpOrLeave}
-        className={`flex items-center gap-2 overflow-x-auto pb-1.5 select-none no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden transition-cursor ${
+        className={`flex items-center gap-2 overflow-x-auto px-1 py-1.5 select-none no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden transition-cursor ${
           isDragging ? 'cursor-grabbing' : 'cursor-grab'
         }`}
         title="Clique e arraste com o mouse para rolar as listas"
@@ -258,10 +258,10 @@ export const ListSelector: React.FC<ListSelectorProps> = ({
           return (
             <div
               key={list.id}
-              className={`group flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl border transition-all select-none whitespace-nowrap active:scale-98 ${
+              className={`group flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-2xl border-2 transition-all select-none whitespace-nowrap active:scale-98 cursor-pointer ${
                 isActive
-                  ? `${activeTheme.bgButtonPrimary} ${activeTheme.textButtonPrimary} border-transparent font-extrabold ring-2 ring-current`
-                  : `${activeTheme.bgCard} ${activeTheme.borderCard} ${activeTheme.textPrimary} hover:opacity-90`
+                  ? `${activeTheme.bgButtonPrimary} ${activeTheme.textButtonPrimary} border-white/95 dark:border-white shadow-md font-extrabold`
+                  : `${activeTheme.bgCard} border-slate-300 dark:border-slate-700/80 hover:border-slate-400 dark:hover:border-slate-500 ${activeTheme.textPrimary} hover:opacity-95 font-bold`
               }`}
               onClick={() => {
                 if (dragDistanceRef.current > 6) {
@@ -276,10 +276,10 @@ export const ListSelector: React.FC<ListSelectorProps> = ({
 
               {/* Badge com contagem de itens pendentes */}
               <span
-                className={`text-xs px-2 py-0.5 rounded-full font-bold ml-1 pointer-events-none ${
+                className={`text-xs px-2.5 py-0.5 rounded-full font-bold ml-1 pointer-events-none ${
                   isActive
-                    ? 'bg-emerald-800 text-emerald-100'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                    ? 'bg-black/25 text-white border border-white/20 shadow-xs'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-transparent'
                 }`}
               >
                 {pendingItems > 0 ? `${pendingItems} restantes` : 'Concluída'}
