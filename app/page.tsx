@@ -866,8 +866,9 @@ export default function ShoppingListPage() {
             className="flex items-center gap-1.5 flex-wrap pt-0.5"
             aria-label="Paleta de cores"
           >
-            {THEME_LIST.map((theme) => {
+            {THEME_LIST.map((theme, index) => {
               const isSelected = currentThemeId === theme.id;
+              const isFirst = index === 0;
               return (
                 <button
                   key={theme.id}
@@ -881,11 +882,14 @@ export default function ShoppingListPage() {
                   className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full transition-all active:scale-90 cursor-pointer flex items-center justify-center shrink-0 ${
                     isSelected
                       ? 'ring-2 ring-emerald-500 ring-offset-2 scale-110 shadow-sm'
-                      : 'hover:scale-110 opacity-75 hover:opacity-100'
+                      : 'hover:scale-110 opacity-80 hover:opacity-100'
                   }`}
                   style={{
                     backgroundColor: theme.dotColor,
-                    border: `1.5px solid ${theme.borderDot || '#94a3b8'}`,
+                    border: isFirst
+                      ? '2px solid #334155'
+                      : `1.5px solid ${theme.borderDot || '#94a3b8'}`,
+                    boxShadow: isFirst ? '0 0 0 1px rgba(0,0,0,0.2)' : undefined,
                   }}
                   title={theme.name}
                   aria-label={theme.name}

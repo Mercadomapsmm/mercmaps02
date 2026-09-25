@@ -83,7 +83,10 @@ export type ContrastThemeId =
   | 'verde-oliva'
   | 'terracota-rust'
   | 'platina-minimal'
-  | 'turquesa-oceano';
+  | 'turquesa-oceano'
+  | 'lavanda-pro'
+  | 'verde-musgo'
+  | 'cobre-bronze';
 
 export interface AccessibilitySettings {
   fontSize: FontSizeOption;
