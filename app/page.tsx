@@ -756,7 +756,7 @@ export default function ShoppingListPage() {
         <div className="w-16 h-16 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-lg shadow-emerald-600/30 animate-pulse mb-3">
           <ShoppingCart className="w-8 h-8" />
         </div>
-        <p className="text-sm font-bold text-slate-600 dark:text-slate-300">Carregando Lista de Compras...</p>
+        <p className="text-sm font-bold text-slate-600 dark:text-slate-300">Carregando Listasrapidas.online...</p>
       </div>
     );
   }
@@ -856,11 +856,11 @@ export default function ShoppingListPage() {
               id="app-main-title"
               className={`text-2xl sm:text-3xl lg:text-4xl tracking-tight leading-none ${activeTheme.titleColor}`}
             >
-              Lista de Compras
+              Listasrapidas.online
             </h1>
           </div>
 
-          {/* Botões das cores logo abaixo do nome "Lista de Compras" (sem escrever o nome das cores) */}
+          {/* Botões das cores logo abaixo de "Listasrapidas.online" (sem escrever o nome das cores) */}
           <div
             id="header-color-buttons"
             className="flex items-center gap-1.5 flex-wrap pt-0.5"

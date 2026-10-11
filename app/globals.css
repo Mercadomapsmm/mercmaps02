@@ -33,6 +33,24 @@
   animation: gentle-blink 2.2s ease-in-out infinite;
 }
 
+/* Animação suave para a lista em uso ficar levemente piscante */
+@keyframes active-list-gentle-blink {
+  0%, 100% {
+    opacity: 1;
+    filter: brightness(1);
+    box-shadow: 0 2px 8px -1px rgba(0, 0, 0, 0.15);
+  }
+  50% {
+    opacity: 0.84;
+    filter: brightness(1.1);
+    box-shadow: 0 0 16px 2px rgba(255, 255, 255, 0.35);
+  }
+}
+
+.animate-active-list-blink {
+  animation: active-list-gentle-blink 2.2s ease-in-out infinite;
+}
+
 /* Hide scrollbar utility */
 .no-scrollbar::-webkit-scrollbar {
   display: none;

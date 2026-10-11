@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ShoppingList, FontSizeOption, ContrastThemeId } from '@/types/shopping';
-import { Plus, List, Mic, Trash2, Check, X, Share2 } from 'lucide-react';
+import { Plus, List, Mic, Trash2, Check, X, Share2, Layers, ChevronLeft, ChevronRight } from 'lucide-react';
 import { playAddSound, playVoiceStartSound } from '@/lib/sound';
 import { CONTRAST_THEMES } from '@/lib/contrastThemes';
 
@@ -44,6 +44,15 @@ export const ListSelector: React.FC<ListSelectorProps> = ({
   const scrollLeftRef = useRef(0);
   const [isDragging, setIsDragging] = useState(false);
   const dragDistanceRef = useRef(0);
+
+  // Centraliza suavemente a lista em uso quando selecionada
+  useEffect(() => {
+    if (!scrollContainerRef.current) return;
+    const activeEl = scrollContainerRef.current.querySelector<HTMLElement>('[data-active="true"]');
+    if (activeEl) {
+      activeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
+  }, [activeListId]);
 
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!scrollContainerRef.current) return;
@@ -258,9 +267,10 @@ export const ListSelector: React.FC<ListSelectorProps> = ({
           return (
             <div
               key={list.id}
+              data-active={isActive ? 'true' : 'false'}
               className={`group flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-2xl border-2 transition-all select-none whitespace-nowrap active:scale-98 cursor-pointer ${
                 isActive
-                  ? `${activeTheme.bgButtonPrimary} ${activeTheme.textButtonPrimary} border-white/95 dark:border-white shadow-md font-extrabold`
+                  ? `${activeTheme.bgButtonPrimary} ${activeTheme.textButtonPrimary} border-white/95 dark:border-white shadow-md font-extrabold animate-active-list-blink`
                   : `${activeTheme.bgCard} border-slate-300 dark:border-slate-700/80 hover:border-slate-400 dark:hover:border-slate-500 ${activeTheme.textPrimary} hover:opacity-95 font-bold`
               }`}
               onClick={() => {
@@ -323,6 +333,74 @@ export const ListSelector: React.FC<ListSelectorProps> = ({
             </div>
           );
         })}
+      </div>
+
+      {/* Indicação visual de carrossel abaixo do nome das listas */}
+      <div
+        id="list-carousel-indication-bar"
+        className="flex items-center justify-between px-2 pt-1 text-xs text-slate-500 dark:text-slate-400 select-none"
+      >
+        <div className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+          <span className="flex items-center gap-1">
+            <Layers className="w-3.5 h-3.5" />
+            <span>Carrossel de Listas</span>
+          </span>
+          <span className="opacity-40 hidden sm:inline">•</span>
+          <span className="text-[10px] font-normal opacity-70 hidden sm:inline">
+            arraste ou deslize para os lados
+          </span>
+        </div>
+
+        {/* Indicador de navegação do carrossel */}
+        <div className="flex items-center gap-1.5" aria-label="Indicador do carrossel de listas">
+          <button
+            type="button"
+            onClick={() => {
+              if (scrollContainerRef.current) {
+                scrollContainerRef.current.scrollBy({ left: -140, behavior: 'smooth' });
+              }
+            }}
+            className="p-0.5 rounded text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer"
+            title="Rolar carrossel para a esquerda"
+            aria-label="Rolar carrossel para a esquerda"
+          >
+            <ChevronLeft className="w-3.5 h-3.5" />
+          </button>
+
+          <div className="flex items-center gap-1">
+            {lists.map((list) => {
+              const isCurrent = list.id === activeListId;
+              return (
+                <button
+                  key={`carousel-dot-${list.id}`}
+                  type="button"
+                  onClick={() => onSelectList(list.id)}
+                  className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                    isCurrent
+                      ? 'w-4 bg-emerald-500 dark:bg-emerald-400 shadow-xs'
+                      : 'w-1.5 bg-slate-300 dark:bg-slate-700 hover:bg-slate-400'
+                  }`}
+                  title={`Ir para lista "${list.name}"`}
+                  aria-label={`Lista ${list.name}`}
+                />
+              );
+            })}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              if (scrollContainerRef.current) {
+                scrollContainerRef.current.scrollBy({ left: 140, behavior: 'smooth' });
+              }
+            }}
+            className="p-0.5 rounded text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer"
+            title="Rolar carrossel para a direita"
+            aria-label="Rolar carrossel para a direita"
+          >
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
     </nav>
   );

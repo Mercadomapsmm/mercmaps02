@@ -17,9 +17,9 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'Remix MercadoList',
-  description: 'Imported from GitHub: Mercadomapsmm/MercadoList',
-  applicationName: 'Remix MercadoList',
+  title: 'Listasrapidas.online',
+  description: 'Listasrapidas.online - Listas de compras rápidas, inteligentes e acessíveis',
+  applicationName: 'Listasrapidas.online',
   formatDetection: {
     telephone: false,
   },
@@ -34,14 +34,14 @@ export const metadata: Metadata = {
     ],
   },
   openGraph: {
-    title: 'Remix MercadoList',
-    description: 'Imported from GitHub: Mercadomapsmm/MercadoList',
+    title: 'Listasrapidas.online',
+    description: 'Listasrapidas.online - Listas de compras rápidas, inteligentes e acessíveis',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Remix MercadoList',
-    description: 'Imported from GitHub: Mercadomapsmm/MercadoList',
+    title: 'Listasrapidas.online',
+    description: 'Listasrapidas.online - Listas de compras rápidas, inteligentes e acessíveis',
   },
 };
 
