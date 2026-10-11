@@ -17,9 +17,9 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'Listasrapidas.online',
-  description: 'Listasrapidas.online - Listas de compras rápidas, inteligentes e acessíveis',
-  applicationName: 'Listasrapidas.online',
+  title: 'Superlistas.online',
+  description: 'Superlistas.online - Listas de compras rápidas, inteligentes e acessíveis',
+  applicationName: 'Superlistas.online',
   formatDetection: {
     telephone: false,
   },
@@ -34,14 +34,14 @@ export const metadata: Metadata = {
     ],
   },
   openGraph: {
-    title: 'Listasrapidas.online',
-    description: 'Listasrapidas.online - Listas de compras rápidas, inteligentes e acessíveis',
+    title: 'Superlistas.online',
+    description: 'Superlistas.online - Listas de compras rápidas, inteligentes e acessíveis',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Listasrapidas.online',
-    description: 'Listasrapidas.online - Listas de compras rápidas, inteligentes e acessíveis',
+    title: 'Superlistas.online',
+    description: 'Superlistas.online - Listas de compras rápidas, inteligentes e acessíveis',
   },
 };
 
